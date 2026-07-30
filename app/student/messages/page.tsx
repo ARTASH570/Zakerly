@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
@@ -13,7 +13,7 @@ interface EnrolledTeacher {
   full_name: string
 }
 
-export default function StudentMessagesPage() {
+function StudentMessagesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { conversations, loading, error, reload } = useConversations()
@@ -39,12 +39,12 @@ export default function StudentMessagesPage() {
 
       const seen = new Set<string>()
       const teachers: EnrolledTeacher[] = []
-      for (const row of (data as any[]) || []) {
+      for (const row of (data as any[]) ?? []) {
         const teacherId = row.courses?.teacher_id
         const fullName = row.courses?.teachers?.full_name
         if (teacherId && !seen.has(teacherId)) {
           seen.add(teacherId)
-          teachers.push({ teacher_id: teacherId, full_name: fullName || 'معلم' })
+          teachers.push({ teacher_id: teacherId, full_name: fullName ?? 'معلم' })
         }
       }
       setEnrolledTeachers(teachers)
@@ -72,7 +72,6 @@ export default function StudentMessagesPage() {
   }
 
   const selectedConversation = conversations.find((c) => c.id === selectedId)
-  // معلمين لسه ملهمش محادثة مفتوحة
   const teachersWithoutConversation = enrolledTeachers.filter(
     (t) => !conversations.some((c) => c.otherPartyId === t.teacher_id)
   )
@@ -107,7 +106,7 @@ export default function StudentMessagesPage() {
           )}
           {error && <p className="text-red-400 text-sm text-center py-4">{error}</p>}
           <ConversationList
-            conversations={conversations}
+ conversations={conversations}
             selectedId={selectedId}
             onSelect={setSelectedId}
             loading={loading}
@@ -125,5 +124,13 @@ export default function StudentMessagesPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function StudentMessagesPage() {
+  return (
+    <Suspense fallback={null}>
+      <StudentMessagesContent />
+    </Suspense>
   )
 }

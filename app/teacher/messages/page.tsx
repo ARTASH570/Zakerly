@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
@@ -13,7 +13,7 @@ interface EnrolledStudent {
   full_name: string
 }
 
-export default function TeacherMessagesPage() {
+function TeacherMessagesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { conversations, loading, error, reload } = useConversations()
@@ -36,7 +36,7 @@ export default function TeacherMessagesPage() {
         .select('id')
         .eq('teacher_id', userData.user.id)
 
-      const courseIds = (courses || []).map((c) => c.id)
+      const courseIds = (courses ?? []).map((c) => c.id)
       if (courseIds.length === 0) return
 
       const { data } = await supabase
@@ -47,7 +47,7 @@ export default function TeacherMessagesPage() {
 
       const seen = new Set<string>()
       const students: EnrolledStudent[] = []
-      for (const row of (data as any[]) || []) {
+      for (const row of (data as any[]) ?? []) {
         const studentId = row.student_id
         const fullName = row.students?.full_name
         if (studentId && !seen.has(studentId)) {
@@ -108,7 +108,7 @@ export default function TeacherMessagesPage() {
                   >
                     {s.full_name}
                   </button>
-                ))}
+ ))}
               </div>
             </div>
           )}
@@ -132,5 +132,13 @@ export default function TeacherMessagesPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function TeacherMessagesPage() {
+  return (
+    <Suspense fallback={null}>
+      <TeacherMessagesContent />
+    </Suspense>
   )
 }
