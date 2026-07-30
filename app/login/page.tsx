@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabaseClient'
+import { supabase } from '@/lib/supabase/client'
 
 function LoginPageContent() {
   const searchParams = useSearchParams()
@@ -53,7 +53,17 @@ function LoginPageContent() {
       // لكن عميل المتصفح (supabase) لسه محتاج يعرف بالجلسة الجديدة دي، فبنجدده يقرأها من الكوكيز
       await supabase.auth.getSession()
 
-      router.push(role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard')
+      // بنوجّه حسب الدور الحقيقي اللي السيرفر أكّده (مش حسب التاب اللي المستخدم
+      // ضاغط عليه في الواجهة) - عشان لو حد سجّل دخول وهو دايس بالغلط على تاب
+      // "معلم" رغم إن حسابه طالب، يتوجّه لمكانه الصح مش لداشبورد فاضي/غلط
+      const verifiedRole = data.role || role
+      const destination =
+        verifiedRole === 'admin'
+          ? '/admin/dashboard'
+          : verifiedRole === 'teacher'
+            ? '/teacher/dashboard'
+            : '/student/dashboard'
+      router.push(destination)
     } catch (err) {
       setErrorMsg('حصل خطأ، حاول تاني')
     } finally {

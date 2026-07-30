@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { registerSchema, validate } from '@/lib/validation'
-import { logActivity } from '@/lib/activityLog'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { registerSchema, validate } from '@/lib/shared/validation'
+import { logActivity } from '@/lib/shared/activityLog'
 
 // POST /api/auth/register
 // Body: { email, password, fullName, role, parentPhone? }
@@ -62,6 +62,12 @@ export async function POST(request: Request) {
     })
 
     if (profileError) {
+      // ⚠️ لو فشل إنشاء صف البروفايل بعد ما نجح إنشاء حساب auth.users، لازم
+      // نرجع بالحالة زي ما كانت (rollback) - وإلا هيفضل حساب "معلّق" قادر
+      // يسجل دخول لكن من غير أي دور (مش معلم ولا طالب)، وحالته هتبقى معطوبة.
+      console.error('Profile insert failed after signUp, rolling back auth user:', profileError)
+      Sentry.captureMessage(`Register rollback: profile insert failed for ${data.user.id}`, 'error')
+      await supabaseAdmin.auth.admin.deleteUser(data.user.id)
       return NextResponse.json({ error: 'حصل خطأ في إنشاء الحساب' }, { status: 500 })
     }
 

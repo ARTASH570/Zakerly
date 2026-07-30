@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { requireAdmin } from '@/lib/auth'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { logActivity } from '@/lib/activityLog'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireAdmin } from '@/features/auth/lib/auth'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { logActivity } from '@/lib/shared/activityLog'
 
 // POST /api/admin/students/[id]/toggle-disable
 export async function POST(request: Request, { params }: { params: { id: string } }) {

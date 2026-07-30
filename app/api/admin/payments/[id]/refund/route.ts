@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { requireAdmin } from '@/lib/auth'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { logActivity } from '@/lib/activityLog'
-import { refundStripePayment } from '@/lib/stripe'
-import { refundPaypalPayment } from '@/lib/paypal'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireAdmin } from '@/features/auth/lib/auth'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { logActivity } from '@/lib/shared/activityLog'
+import { refundStripePayment } from '@/features/payments/lib/stripe'
+import { refundPaypalPayment } from '@/features/payments/lib/paypal'
 
 // POST /api/admin/payments/[id]/refund
 export async function POST(request: Request, { params }: { params: { id: string } }) {

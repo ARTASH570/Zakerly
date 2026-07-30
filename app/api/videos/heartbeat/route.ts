@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { requireStudent } from '@/lib/auth'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { videoHeartbeatSchema, validate } from '@/lib/validation'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireStudent } from '@/features/auth/lib/auth'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { videoHeartbeatSchema, validate } from '@/lib/shared/validation'
 
 // POST /api/videos/heartbeat
 // Body: { videoId: string, positionSeconds: number, durationSeconds?: number }

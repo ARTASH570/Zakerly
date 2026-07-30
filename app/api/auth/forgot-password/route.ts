@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { forgotPasswordSchema, validate } from '@/lib/validation'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { forgotPasswordSchema, validate } from '@/lib/shared/validation'
 
 // POST /api/auth/forgot-password
 // Body: { email: string }

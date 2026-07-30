@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { loginSchema, validate } from '@/lib/validation'
-import { logActivity } from '@/lib/activityLog'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { loginSchema, validate } from '@/lib/shared/validation'
+import { logActivity } from '@/lib/shared/activityLog'
 
 // POST /api/auth/login
 // Body: { email: string, password: string }
@@ -55,20 +55,28 @@ export async function POST(request: Request) {
       ? { data: null }
       : await supabaseAdmin.from('students').select('id, is_disabled').eq('id', data.user.id).maybeSingle()
 
+    // حسابات الأدمن مفيهاش عمود is_disabled أصلاً (بتتعمل يدوي بس، زي ما موضح
+    // في requireAdmin) - هنا بنتحقق منها بس عشان نصنّف الدور صح في activity_logs
+    const { data: admin } = teacher || student
+      ? { data: null }
+      : await supabaseAdmin.from('admins').select('id').eq('id', data.user.id).maybeSingle()
+
     const account = teacher || student
     if (account?.is_disabled) {
       await supabase.auth.signOut()
       return NextResponse.json({ error: 'حسابك متوقف حاليًا، تواصل مع الدعم' }, { status: 403 })
     }
 
+    const verifiedRole = teacher ? 'teacher' : student ? 'student' : admin ? 'admin' : 'student'
+
     await logActivity({
       userId: data.user.id,
-      userRole: teacher ? 'teacher' : 'student',
+      userRole: verifiedRole,
       action: 'login',
       request,
     })
 
-    return NextResponse.json({ success: true, userId: data.user.id })
+    return NextResponse.json({ success: true, userId: data.user.id, role: verifiedRole })
   } catch (err) {
     console.error('Login error:', err)
     return NextResponse.json({ error: 'حصل خطأ، حاول تاني' }, { status: 500 })

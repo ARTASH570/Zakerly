@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabaseClient'
-import PaymentButton from '@/components/PaymentButton'
+import { supabase } from '@/lib/supabase/client'
+import PaymentButton from '@/features/payments/components/PaymentButton'
 
 interface CourseDetail {
   id: string

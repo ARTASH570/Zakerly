@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { requireAdmin } from '@/lib/auth'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireAdmin } from '@/features/auth/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,15 +28,21 @@ export async function GET() {
       .order('created_at', { ascending: false })
       .limit(50)
 
+    // ⚠️ إجمالي الإيرادات لازم يتحسب من كل الدفعات الناجحة فعليًا، مش بس آخر 50
+    // دفعة (اللي فوق دي مخصصة للعرض في الجدول بس). استعلام منفصل وخفيف
+    // (عمود amount بس) عشان الرقم يبقى دقيق حتى لو المنصة فيها آلاف الدفعات.
+    const { data: successfulPayments } = await supabaseAdmin
+      .from('payments')
+      .select('amount')
+      .eq('status', 'success')
+
     const { data: recentActivity } = await supabaseAdmin
       .from('activity_logs')
       .select('id, user_role, action, entity_type, entity_id, created_at')
       .order('created_at', { ascending: false })
       .limit(30)
 
-    const totalRevenue = (payments || [])
-      .filter((p) => p.status === 'success')
-      .reduce((sum, p) => sum + Number(p.amount), 0)
+    const totalRevenue = (successfulPayments || []).reduce((sum, p) => sum + Number(p.amount), 0)
 
     return NextResponse.json({
       totalTeachers: teachers?.length || 0,

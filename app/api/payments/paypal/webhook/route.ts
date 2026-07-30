@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { verifyPaypalWebhookSignature } from '@/lib/paypal'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { verifyPaypalWebhookSignature } from '@/features/payments/lib/paypal'
 
 export async function POST(request: Request) {
   try {

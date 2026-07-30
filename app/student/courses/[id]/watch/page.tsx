@@ -3,8 +3,8 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabaseClient'
-import VideoPlayer from '@/components/VideoPlayer'
+import { supabase } from '@/lib/supabase/client'
+import VideoPlayer from '@/features/videos/components/VideoPlayer'
 
 interface Video {
   id: string

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { requireTeacher } from '@/lib/auth'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { reorderVideosSchema, validate } from '@/lib/validation'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireTeacher } from '@/features/auth/lib/auth'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { reorderVideosSchema, validate } from '@/lib/shared/validation'
 
 // POST /api/videos/reorder
 // Body: { courseId, orderedVideoIds: string[] } - بالترتيب الجديد اللي المعلم عمله بالسحب

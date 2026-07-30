@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabaseClient'
-import VideoUploader from '@/components/VideoUploader'
+import { supabase } from '@/lib/supabase/client'
+import VideoUploader from '@/features/videos/components/VideoUploader'
 
 interface Video {
   id: string

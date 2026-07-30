@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
 import crypto from 'crypto'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { logActivity } from '@/lib/activityLog'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { logActivity } from '@/lib/shared/activityLog'
 
 // الترتيب الرسمي من توثيق Paymob لحساب الـ HMAC والتأكد إن الطلب فعلاً جاي منهم
 // https://developers.paymob.com -> Transaction Processed Callback

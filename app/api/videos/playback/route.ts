@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { generateSecureEmbedUrl } from '@/lib/bunny'
-import { requireStudent } from '@/lib/auth'
-import { videoPlaybackSchema, validate } from '@/lib/validation'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { checkRateLimit } from '@/lib/rateLimit'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { generateSecureEmbedUrl } from '@/features/videos/lib/bunny'
+import { requireStudent } from '@/features/auth/lib/auth'
+import { videoPlaybackSchema, validate } from '@/lib/shared/validation'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
 
 // POST /api/videos/playback
 // Body: { videoId: string }

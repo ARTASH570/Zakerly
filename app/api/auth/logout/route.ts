@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { logActivity } from '@/lib/activityLog'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { logActivity } from '@/lib/shared/activityLog'
 
 // POST /api/auth/logout
 export async function POST(request: Request) {
@@ -23,9 +23,17 @@ export async function POST(request: Request) {
         .eq('id', user.id)
         .maybeSingle()
 
+      const { data: student } = teacher
+        ? { data: null }
+        : await supabaseAdmin.from('students').select('id').eq('id', user.id).maybeSingle()
+
+      const { data: admin } = teacher || student
+        ? { data: null }
+        : await supabaseAdmin.from('admins').select('id').eq('id', user.id).maybeSingle()
+
       await logActivity({
         userId: user.id,
-        userRole: teacher ? 'teacher' : 'student',
+        userRole: teacher ? 'teacher' : student ? 'student' : admin ? 'admin' : 'student',
         action: 'logout',
         request,
       })

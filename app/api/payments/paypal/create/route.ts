@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { createPaypalOrder } from '@/lib/paypal'
-import { requireStudent } from '@/lib/auth'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { createPaymentSchema, validate } from '@/lib/validation'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { validateAndPriceCoupon } from '@/lib/coupons'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { createPaypalOrder } from '@/features/payments/lib/paypal'
+import { requireStudent } from '@/features/auth/lib/auth'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { createPaymentSchema, validate } from '@/lib/shared/validation'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { validateAndPriceCoupon } from '@/features/payments/lib/coupons'
 
 // POST /api/payments/paypal/create
 // Body: { courseId: string }
