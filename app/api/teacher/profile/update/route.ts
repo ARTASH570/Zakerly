@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { requireTeacher } from '@/lib/auth'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { checkRateLimit } from '@/lib/rateLimit'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireTeacher } from '@/features/auth/lib/auth'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
 import { z } from 'zod'
-import { validate } from '@/lib/validation'
-import { logActivity } from '@/lib/activityLog'
+import { validate } from '@/lib/shared/validation'
+import { logActivity } from '@/lib/shared/activityLog'
 
 const updateProfileSchema = z.object({
   fullName: z.string().trim().min(2).max(100),

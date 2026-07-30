@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { requireTeacher } from '@/lib/auth'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { reorderSectionsSchema, validate } from '@/lib/validation'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireTeacher } from '@/features/auth/lib/auth'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { reorderSectionsSchema, validate } from '@/lib/shared/validation'
 
 // POST /api/sections/reorder
 // Body: { courseId, orderedSectionIds: string[] }
@@ -39,6 +39,18 @@ export async function POST(request: Request) {
 
     if (!course) {
       return NextResponse.json({ error: 'مش مسموحلك' }, { status: 403 })
+    }
+
+    // تحقق أمان إضافي: تأكد إن كل الأقسام المبعوتة فعلاً من نفس الكورس
+    // (يمنع محاولة خبيثة لإعادة ترتيب قسم بتاع كورس تاني عن طريق تمرير الـ ID بتاعه)
+    const { count } = await supabaseAdmin
+      .from('sections')
+      .select('id', { count: 'exact', head: true })
+      .eq('course_id', courseId)
+      .in('id', orderedSectionIds)
+
+    if (count !== orderedSectionIds.length) {
+      return NextResponse.json({ error: 'بيانات غير صحيحة' }, { status: 400 })
     }
 
     // ⚠️ استدعاء دالة atomic في قاعدة البيانات بدل N تحديثات منفصلة -

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
-import { stripe } from '@/lib/stripe'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { logActivity } from '@/lib/activityLog'
+import { stripe } from '@/features/payments/lib/stripe'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { logActivity } from '@/lib/shared/activityLog'
 
 export async function POST(request: Request) {
   const body = await request.text() // لازم النص الخام (مش JSON متحول) عشان التحقق من التوقيع

@@ -30,6 +30,9 @@ export default function TeacherDashboard() {
         <Link href="/teacher/coupons">
           <DashboardCard title="الكوبونات" desc="اعمل أكواد خصم لطلابك" />
         </Link>
+        <Link href="/teacher/messages">
+          <DashboardCard title="الرسائل" desc="راسل طلابك المشتركين معاك" />
+        </Link>
       </div>
     </main>
   )

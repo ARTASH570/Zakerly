@@ -24,6 +24,9 @@ export default function StudentDashboard() {
         <Link href="/student/grades">
           <DashboardCard title="درجاتي" desc="متابعة درجاتك وحضورك" />
         </Link>
+        <Link href="/student/messages">
+          <DashboardCard title="الرسائل" desc="تواصل مباشر مع معلمينك" />
+        </Link>
       </div>
 
       {/* هنا هنبني بعدين: مشغل فيديو Bunny Stream */}

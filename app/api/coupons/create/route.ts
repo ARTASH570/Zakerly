@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { requireTeacher } from '@/lib/auth'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { createCouponSchema, validate } from '@/lib/validation'
-import { logActivity } from '@/lib/activityLog'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireTeacher } from '@/features/auth/lib/auth'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { createCouponSchema, validate } from '@/lib/shared/validation'
+import { logActivity } from '@/lib/shared/activityLog'
 
 // POST /api/coupons/create
 export async function POST(request: Request) {

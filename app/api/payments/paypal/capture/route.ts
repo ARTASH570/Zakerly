@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { capturePaypalOrder } from '@/lib/paypal'
-import { requireStudent } from '@/lib/auth'
-import { paypalCaptureSchema, validate } from '@/lib/validation'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { logActivity } from '@/lib/activityLog'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { capturePaypalOrder } from '@/features/payments/lib/paypal'
+import { requireStudent } from '@/features/auth/lib/auth'
+import { paypalCaptureSchema, validate } from '@/lib/shared/validation'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { logActivity } from '@/lib/shared/activityLog'
 
 // POST /api/payments/paypal/capture
 // Body: { orderId: string }
@@ -20,6 +21,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
     const { studentId } = auth
+
+    // ⚠️ الراوت ده بيكلم PayPal API فعليًا في كل استدعاء (capturePaypalOrder) -
+    // من غير حد، طالب يقدر يستدعيه بسرعة كتير مرات ويستنزف الموارد أو يخلي
+    // PayPal يحظر الـ integration مؤقتًا. نفس الحد المستخدم في باقي راوتات الدفع.
+    if (!(await checkRateLimit(`payment-capture:${studentId}`, 10, 300))) {
+      return NextResponse.json({ error: 'حاول تاني بعد شوية' }, { status: 429 })
+    }
 
     const body = await request.json()
     const parsed = validate(paypalCaptureSchema, body)

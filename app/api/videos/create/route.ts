@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import * as Sentry from '@sentry/nextjs'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { createBunnyVideo, generateTusUploadCredentials } from '@/lib/bunny'
-import { requireTeacher } from '@/lib/auth'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { createVideoSchema, validate } from '@/lib/validation'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { logActivity } from '@/lib/activityLog'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { createBunnyVideo, generateTusUploadCredentials } from '@/features/videos/lib/bunny'
+import { requireTeacher } from '@/features/auth/lib/auth'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { createVideoSchema, validate } from '@/lib/shared/validation'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { logActivity } from '@/lib/shared/activityLog'
 
 // POST /api/videos/create
 // Body: { courseId: string, sectionId: string, title: string }
@@ -61,6 +61,17 @@ export async function POST(request: Request) {
     // 2. اعمل الفيديو على Bunny واحصل على الـ GUID بتاعه
     const bunnyVideoId = await createBunnyVideo(title)
 
+    // ⚠️ لازم نحسب order_index يدوي هنا - من غيره كل فيديو جديد بياخد القيمة
+    // الافتراضية 0 من قاعدة البيانات، فكل فيديوهات القسم بتتساوى في الترتيب
+    // وترتيب عرضهم للطالب بيبقى غير موثوق (نفس الباترن المستخدم في sections/create)
+    const { data: maxOrder } = await supabaseAdmin
+      .from('videos')
+      .select('order_index')
+      .eq('section_id', sectionId)
+      .order('order_index', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
     // 3. سجّل الفيديو عندنا (لسه من غير محتوى، هيتحدث تلقائي أول ما الرفع يخلص)
     const { data: video, error: videoError } = await supabaseAdmin
       .from('videos')
@@ -69,6 +80,7 @@ export async function POST(request: Request) {
         section_id: sectionId,
         title,
         bunny_video_id: bunnyVideoId,
+        order_index: (maxOrder?.order_index ?? -1) + 1,
       })
       .select()
       .single()

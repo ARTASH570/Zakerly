@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabaseClient'
-import { summarizeEvaluations, buildParentReportMessage, buildWhatsAppLink } from '@/lib/report'
+import { supabase } from '@/lib/supabase/client'
+import { summarizeEvaluations, buildParentReportMessage, buildWhatsAppLink } from '@/lib/shared/report'
 
 interface StudentRow {
   student_id: string

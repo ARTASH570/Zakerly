@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { resetPasswordSchema, validate } from '@/lib/validation'
-import { logActivity } from '@/lib/activityLog'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { resetPasswordSchema, validate } from '@/lib/shared/validation'
+import { logActivity } from '@/lib/shared/activityLog'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 // POST /api/auth/reset-password
 // Body: { newPassword: string }
@@ -49,9 +49,17 @@ export async function POST(request: Request) {
       .eq('id', user.id)
       .maybeSingle()
 
+    const { data: student } = teacher
+      ? { data: null }
+      : await supabaseAdmin.from('students').select('id').eq('id', user.id).maybeSingle()
+
+    const { data: admin } = teacher || student
+      ? { data: null }
+      : await supabaseAdmin.from('admins').select('id').eq('id', user.id).maybeSingle()
+
     await logActivity({
       userId: user.id,
-      userRole: teacher ? 'teacher' : 'student',
+      userRole: teacher ? 'teacher' : student ? 'student' : admin ? 'admin' : 'student',
       action: 'password.reset',
       request,
     })

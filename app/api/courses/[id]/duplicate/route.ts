@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { requireTeacher } from '@/lib/auth'
-import { verifyRequestOrigin } from '@/lib/csrf'
-import { checkRateLimit } from '@/lib/rateLimit'
-import { logActivity } from '@/lib/activityLog'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireTeacher } from '@/features/auth/lib/auth'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { logActivity } from '@/lib/shared/activityLog'
 
 // POST /api/courses/[id]/duplicate
 export async function POST(request: Request, { params }: { params: { id: string } }) {
