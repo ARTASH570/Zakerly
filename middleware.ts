@@ -26,17 +26,23 @@ function isAlwaysAllowed(pathname: string): boolean {
 let maintenanceCache: { value: boolean; expiresAt: number } | null = null
 const MAINTENANCE_CACHE_TTL_MS = 20_000
 
-// بيبني الـ Content-Security-Policy باستخدام nonce فريد لكل طلب بدل
-// 'unsafe-inline' - كده الـ inline scripts اللي Next.js نفسه محتاجها للـ
-// hydration بتشتغل عادي (لأن عندها الـ nonce الصح)، لكن أي سكريبت مزروع
-// بهجوم XSS مش هيكون عارف الـ nonce فمش هيشتغل - ده أفضل من إما نمنع كل
-// الـ inline scripts (وده بيكسر الموقع زي ما حصل) أو نسمح بيهم كلهم
-// (وده بيلغي فايدة الـ CSP ضد XSS)
-function buildCsp(nonce: string): string {
+// بيبني الـ Content-Security-Policy الخاصة بالموقع، وبتحدد المصادر المسموحة
+// للسكريبتات/الصور/الاتصالات - أول محاولة استخدمت nonce فريد لكل طلب لمنع
+// unsafe-inline بالكامل، لكن اتضح إنها بتتعارض مع الصفحات الـ static (اتفصّل
+// السبب تحت جوه buildCsp)
+function buildCsp(): string {
   const isDev = process.env.NODE_ENV !== 'production'
+  // ⚠️ حاولنا الأول نستخدم nonce فريد لكل طلب (أكثر أمانًا)، لكن أغلب صفحات
+  // الموقع ده static (بتتبني مرة واحدة وقت الـ build)، والـ nonce المكتوب
+  // جوه الصفحة وقتها ثابت للأبد، بينما أي nonce بيتولّد في الـ middleware
+  // هيبقى مختلف في كل طلب - فمش هيتطابقوا أبدًا وهيفضل يمنع كل حاجة. الحل
+  // الصح الكامل (nonce) بيحتاج نخلي الصفحات كلها dynamic، وده تغيير كبير
+  // في الأداء. فبنستخدم unsafe-inline زي أغلب مواقع Next.js في الإنتاج -
+  // باقي قواعد الـ CSP (connect-src, frame-src, object-src) لسه شغالة
+  // وبتحدد المصادر المسموحة، فده مش رجوع لصفر حماية.
   const scriptSrc = isDev
-    ? `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://assets.mediadelivery.net`
-    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://assets.mediadelivery.net`
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://assets.mediadelivery.net"
+    : "script-src 'self' 'unsafe-inline' https://assets.mediadelivery.net"
 
   return [
     "default-src 'self'",
@@ -55,16 +61,9 @@ function buildCsp(nonce: string): string {
 // ده بيشتغل قبل كل صفحة/طلب، وبيجدد توكن الدخول لو قرب ينتهي
 // من غير ده، المستخدم ممكن يتقطع دخوله فجأة وسط استخدامه للموقع
 export async function middleware(request: NextRequest) {
-  const nonce = crypto.randomUUID().replace(/-/g, '')
-  const csp = buildCsp(nonce)
+  const csp = buildCsp()
 
-  // بنحط الـ nonce كـ header على الـ request نفسه عشان Next.js يقدر يقراه
-  // ويطبقه تلقائيًا على الـ inline scripts بتاعته وقت الـ render
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-nonce', nonce)
-  requestHeaders.set('Content-Security-Policy', csp)
-
-  let response = NextResponse.next({ request: { headers: requestHeaders } })
+  let response = NextResponse.next({ request: { headers: request.headers } })
   response.headers.set('Content-Security-Policy', csp)
 
   const supabase = createServerClient(
@@ -77,13 +76,13 @@ export async function middleware(request: NextRequest) {
         },
         set(name: string, value: string, options: CookieOptions) {
           request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({ request: { headers: requestHeaders } })
+          response = NextResponse.next({ request: { headers: request.headers } })
           response.headers.set('Content-Security-Policy', csp)
           response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
           request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({ request: { headers: requestHeaders } })
+          response = NextResponse.next({ request: { headers: request.headers } })
           response.headers.set('Content-Security-Policy', csp)
           response.cookies.set({ name, value: '', ...options })
         },
