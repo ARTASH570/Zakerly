@@ -13,7 +13,7 @@ interface EnrolledTeacher {
   full_name: string
 }
 
-export default function StudentMessagesPage() {
+function StudentMessagesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { conversations, loading, error, reload } = useConversations()
