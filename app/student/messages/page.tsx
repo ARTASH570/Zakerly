@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
@@ -125,5 +125,12 @@ export default function StudentMessagesPage() {
         </div>
       </div>
     </main>
+  )
+}
+export default function StudentMessagesPage() {
+  return (
+    <Suspense fallback={null}>
+      <StudentMessagesContent />
+    </Suspense>
   )
 }
