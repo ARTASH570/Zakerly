@@ -21,6 +21,7 @@ interface Option {
   id: string
   option_text: string
   is_correct: boolean
+  order_index: number
 }
 
 interface Question {
@@ -100,11 +101,11 @@ export default function ManageQuizPage() {
       .order('order_index', { ascending: true })
 
     setQuestions(
-      ((questionsData as unknown as (Question & { quiz_options: (Option & { order_index: number })[] })[]) || []).map(
-        (q) => ({ ...q, quiz_options: q.quiz_options.sort((a, b) => a.order_index - b.order_index) })
-      )
+      ((questionsData as unknown as Question[]) || []).map((q) => ({
+        ...q,
+        quiz_options: [...q.quiz_options].sort((a, b) => a.order_index - b.order_index),
+      }))
     )
-
     setLoading(false)
   }, [router, quizId])
 
