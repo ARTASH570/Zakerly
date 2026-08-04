@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
@@ -13,7 +13,7 @@ interface EnrolledStudent {
   full_name: string
 }
 
-export default function TeacherMessagesPage() {
+function TeacherMessagesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { conversations, loading, error, reload } = useConversations()
@@ -108,7 +108,7 @@ export default function TeacherMessagesPage() {
                   >
                     {s.full_name}
                   </button>
-                ))}
+                  ))}
               </div>
             </div>
           )}
@@ -132,5 +132,13 @@ export default function TeacherMessagesPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function TeacherMessagesPage() {
+  return (
+    <Suspense fallback={null}>
+      <TeacherMessagesContent />
+    </Suspense>
   )
 }
