@@ -4,35 +4,13 @@ const { withSentryConfig } = require('@sentry/nextjs')
 const nextConfig = {
   reactStrictMode: true,
   async headers() {
-    // بنسمح بالـ iframe بس من bunny (لمشغل الفيديو) ومن بوابات الدفع اللي محتاجة redirect
-    //
-    // ⚠️ 'unsafe-inline' و'unsafe-eval' في script-src كانوا مفعّلين دايمًا (حتى في
-    // الإنتاج)، وده بيلغي معظم فايدة CSP ضد XSS أصلًا (أي سكريبت inline هيشتغل
-    // عادي حتى لو حصل XSS بالغلط في مكان ما). Next.js محتاجهم في وضع التطوير بس
-    // (Fast Refresh / eval-source-map)، مش في الإنتاج - فبنفعّلهم شرطيًا بس.
-    const isDev = process.env.NODE_ENV !== 'production'
-    const scriptSrc = isDev
-      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://assets.mediadelivery.net"
-      : "script-src 'self' https://assets.mediadelivery.net"
-
-    const csp = [
-      "default-src 'self'",
-      scriptSrc,
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
-      "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co https://api-m.paypal.com https://api-m.sandbox.paypal.com https://api.stripe.com https://*.bunnycdn.com https://video.bunnycdn.com https://*.b-cdn.net https://*.sentry.io",
-      "frame-src 'self' https://iframe.mediadelivery.net https://accept.paymob.com https://*.paypal.com https://checkout.stripe.com",
-      "frame-ancestors 'self'",
-    ].join('; ')
-
+    // ⚠️ Content-Security-Policy اتنقل لملف middleware.ts عشان يقدر يستخدم nonce
+    // مختلف لكل طلب (مينفعش هنا لأن headers() هنا بتتحسب مرة واحدة وقت الـ build
+    // مش لكل request) - شوف middleware.ts لتفاصيل السبب والحل.
     return [
       {
         source: '/:path*',
         headers: [
-          // Content-Security-Policy: بيحدد بالظبط مصادر السكريبت/الصور/الاتصالات المسموحة،
-          // بيقلل بشكل كبير من احتمالية هجمات XSS حتى لو حصل خطأ برمجي في مكان ما
-          { key: 'Content-Security-Policy', value: csp },
           // HSTS: بيجبر المتصفح يستخدم HTTPS بس مع الموقع لمدة سنة، حتى لو المستخدم كتب http:// بالغلط
           {
             key: 'Strict-Transport-Security',
