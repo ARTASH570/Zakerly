@@ -1,0 +1,60 @@
+import { NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireAdmin } from '@/features/auth/lib/auth'
+
+export const dynamic = 'force-dynamic'
+
+// GET /api/admin/overview
+export async function GET() {
+  try {
+    const auth = await requireAdmin()
+    if ('error' in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
+    }
+
+    const { data: teachers } = await supabaseAdmin
+      .from('teachers')
+      .select('id, full_name, subject, is_disabled, created_at')
+      .order('created_at', { ascending: false })
+
+    const { data: students } = await supabaseAdmin
+      .from('students')
+      .select('id, full_name, parent_phone, is_disabled, created_at')
+      .order('created_at', { ascending: false })
+
+    const { data: payments } = await supabaseAdmin
+      .from('payments')
+      .select('id, student_id, course_id, amount, provider, status, created_at, students(full_name), courses(title)')
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    // ⚠️ إجمالي الإيرادات لازم يتحسب من كل الدفعات الناجحة فعليًا، مش بس آخر 50
+    // دفعة (اللي فوق دي مخصصة للعرض في الجدول بس). استعلام منفصل وخفيف
+    // (عمود amount بس) عشان الرقم يبقى دقيق حتى لو المنصة فيها آلاف الدفعات.
+    const { data: successfulPayments } = await supabaseAdmin
+      .from('payments')
+      .select('amount')
+      .eq('status', 'success')
+
+    const { data: recentActivity } = await supabaseAdmin
+      .from('activity_logs')
+      .select('id, user_role, action, entity_type, entity_id, created_at')
+      .order('created_at', { ascending: false })
+      .limit(30)
+
+    const totalRevenue = (successfulPayments || []).reduce((sum, p) => sum + Number(p.amount), 0)
+
+    return NextResponse.json({
+      totalTeachers: teachers?.length || 0,
+      totalStudents: students?.length || 0,
+      totalRevenue,
+      teachers: teachers || [],
+      students: students || [],
+      payments: payments || [],
+      recentActivity: recentActivity || [],
+    })
+  } catch (err) {
+    console.error('Admin overview error:', err)
+    return NextResponse.json({ error: 'حصل خطأ' }, { status: 500 })
+  }
+}
