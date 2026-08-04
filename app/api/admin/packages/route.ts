@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { requireAdmin } from '@/features/auth/lib/auth'
-
+export const dynamic = 'force-dynamic'
 // GET /api/admin/packages - كل الباقات (حتى الغير مفعّلة) + عدد المشتركين في كل واحدة
 export async function GET() {
   try {

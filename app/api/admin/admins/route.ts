@@ -5,7 +5,7 @@ import { verifyRequestOrigin } from '@/lib/shared/csrf'
 import { checkRateLimit } from '@/lib/shared/rateLimit'
 import { promoteAdminSchema, validate } from '@/lib/shared/validation'
 import { logActivity } from '@/lib/shared/activityLog'
-
+export const dynamic = 'force-dynamic'
 // GET /api/admin/admins
 export async function GET() {
   try {
