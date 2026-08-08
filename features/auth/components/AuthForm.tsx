@@ -89,6 +89,11 @@ window.location.href = destination    } catch (err) {
           </p>
         </div>
 
+        {searchParams.get('confirmed') === 'true' && !isSignUp && (
+           <p className="bg-green-500/10 text-green-400 text-sm text-center rounded-lg py-2.5 px-4 mb-6 animate-fade-in-down">
+    تم تأكيد حسابك بنجاح ✓ سجّل دخولك دلوقتي
+           </p>
+        )}
         {/* اختيار الدور - يظهر بس لو الصفحة عامة مش مخصصة لدور واحد */}
         {!fixedRole && (
           <div className="flex bg-boardLight rounded-lg p-1 mb-6 border border-line">
