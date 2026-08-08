@@ -42,9 +42,11 @@ export default function TeacherPackagesPage() {
   async function subscribe(pkg: TeacherPackage) {
   if (pkg.id === currentPackageId) return
 
-  const referenceNumber = prompt(
-    حوّل مبلغ ${pkg.price.toLocaleString()} ج.م على رقم [01012730722]\n\nبعد التحويل، اكتب رقم العملية أو آخر 4 أرقام من رقم التليفون اللي حوّلت منه:
-  )
+  cconst promptText =
+  'حوّل مبلغ ' +
+  pkg.price.toLocaleString() +
+  ' ج.م على رقم 01012730722\n\nبعد التحويل، اكتب رقم العملية أو آخر 4 أرقام من رقم التليفون اللي حوّلت منه:'
+const referenceNumber = prompt(promptText)
   if (!referenceNumber || referenceNumber.trim().length < 3) {
     if (referenceNumber !== null) alert('لازم تكتب رقم مرجع التحويل')
     return
