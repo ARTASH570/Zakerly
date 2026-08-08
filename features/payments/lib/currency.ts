@@ -23,7 +23,7 @@ let cachedRate: { egpToUsd: number; fetchedAt: number } | null = null
 function getFallbackRate(): number {
   const rate = Number(process.env.EGP_TO_USD_RATE)
 
-  if (!rate  rate <= 0  Number.isNaN(rate)) {
+  if (!rate || rate <= 0 || Number.isNaN(rate)) {
     throw new Error(
       'متغير البيئة EGP_TO_USD_RATE غير موجود أو غير صحيح - لازم يكون رقم أكبر من صفر ' +
         '(مثلاً 0.021 لو الدولار بـ ~47 جنيه) كـ fallback احتياطي في حالة فشل ' +
