@@ -39,32 +39,36 @@ export default function TeacherPackagesPage() {
     })
   }, [router])
 
-  const [subscribingId, setSubscribingIdState] = useState<string | null>(null)
-
   async function subscribe(pkg: TeacherPackage) {
-    if (pkg.id === currentPackageId) return
-    if (!confirm(`تأكيد الاشتراك في باقة "${pkg.name}"؟`)) return
+  if (pkg.id === currentPackageId) return
 
-    setSubscribingIdState(pkg.id)
-    try {
-      const res = await fetch('/api/teacher/packages/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId: pkg.id }),
-      })
-      if (res.ok) {
-        // الاشتراك اتغيّر - لازم نمسح النسخة المكاشة عشان الطلب الجاي يجيب
-        // البيانات الجديدة مش القديمة، وبعدين نجيبها تاني فورًا
-        invalidateCache(PACKAGES_CACHE_KEY)
-        await refresh()
-      } else {
-        const json = await res.json().catch(() => ({}))
-        alert(json.error || 'حصل خطأ في الاشتراك')
-      }
-    } finally {
-      setSubscribingIdState(null)
-    }
+  const referenceNumber = prompt(
+    حوّل مبلغ ${pkg.price.toLocaleString()} ج.م على رقم [01012730722]\n\nبعد التحويل، اكتب رقم العملية أو آخر 4 أرقام من رقم التليفون اللي حوّلت منه:
+  )
+  if (!referenceNumber || referenceNumber.trim().length < 3) {
+    if (referenceNumber !== null) alert('لازم تكتب رقم مرجع التحويل')
+    return
   }
+
+  setSubscribingIdState(pkg.id)
+  try {
+    const res = await fetch('/api/teacher/packages/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ packageId: pkg.id, referenceNumber: referenceNumber.trim() }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (res.ok) {
+      alert(json.message || 'طلبك اتبعت للمراجعة')
+      invalidateCache(PACKAGES_CACHE_KEY)
+      await refresh()
+    } else {
+      alert(json.error || 'حصل خطأ في إرسال الطلب')
+    }
+  } finally {
+    setSubscribingIdState(null)
+  }
+}
 
   return (
     <main className="min-h-screen bg-board text-chalk px-6 md:px-16 py-10">
