@@ -1,11 +1,9 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
 
 export default function LogoutButton() {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   async function handleLogout() {
@@ -13,8 +11,7 @@ export default function LogoutButton() {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
       await supabase.auth.signOut() // بيمسح الجلسة من عميل المتصفح كمان
-      router.push('/login')
-    } finally {
+      window.location.href = '/login'    } finally {
       setLoading(false)
     }
   }

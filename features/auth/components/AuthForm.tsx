@@ -68,8 +68,7 @@ export default function AuthForm({ fixedRole }: AuthFormProps) {
           : verifiedRole === 'teacher'
             ? '/teacher/dashboard'
             : '/student/dashboard'
-      router.push(destination)
-    } catch (err) {
+window.location.href = destination    } catch (err) {
       setErrorMsg('حصل خطأ، حاول تاني')
     } finally {
       setLoading(false)
