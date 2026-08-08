@@ -38,11 +38,9 @@ export async function POST(request: Request) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error || !data.user) {
-      // رسالة عامة من غير ما نوضح "الإيميل مش موجود" أو "الباسورد غلط" تحديدًا
-      // عشان محدش يقدر يستخدم رسالة الخطأ عشان يعرف إيميلات مسجلة فعليًا (enumeration)
-      return NextResponse.json({ error: 'الإيميل أو كلمة السر غلط' }, { status: 401 })
-    }
-
+  console.error('signInWithPassword failed:', error?.message, error?.status)
+  return NextResponse.json({ error: 'الإيميل أو كلمة السر غلط' }, { status: 401 })
+}
     const { data: teacher } = await supabaseAdmin
       .from('teachers')
       .select('id, is_disabled')
