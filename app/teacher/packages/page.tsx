@@ -30,6 +30,7 @@ export default function TeacherPackagesPage() {
   }, [])
 
   const { data, loading, refresh } = useCachedFetch(PACKAGES_CACHE_KEY, fetchPackages, 30_000)
+  const [subscribingId, setSubscribingIdState] = useState<string | null>(null)
   const packages = data?.packages || []
   const currentPackageId = data?.currentPackageId ?? null
 
