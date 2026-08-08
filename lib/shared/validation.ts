@@ -182,6 +182,8 @@ export const updatePackageSchema = z.object({
 
 export const subscribePackageSchema = z.object({
   packageId: z.string().uuid({ message: 'رقم الباقة غير صحيح' }),
+  referenceNumber: z.string().trim().min(3, { message: 'رقم مرجع التحويل مطلوب' }).max(100),
+  note: z.string().trim().max(500).nullable().optional(),
 })
 
 export const toggleMaintenanceSchema = z.object({

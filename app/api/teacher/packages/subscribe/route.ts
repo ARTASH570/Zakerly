@@ -29,16 +29,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'حاول تاني بعد شوية' }, { status: 429 })
     }
 
-    const body = await request.json()
+   const body = await request.json()
     const parsed = validate(subscribePackageSchema, body)
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error }, { status: 400 })
     }
-    const { packageId } = parsed.data
+    const { packageId, referenceNumber, note } = parsed.data
 
     const { data: pkg } = await supabaseAdmin
       .from('teacher_packages')
-      .select('id, is_active')
+      .select('id, is_active, price')
       .eq('id', packageId)
       .maybeSingle()
 
@@ -46,36 +46,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'الباقة دي مش متاحة حاليًا' }, { status: 404 })
     }
 
-    // upsert على teacher_id (unique) - لو المعلم مشترك في باقة قبل كده، بنستبدلها
-    const { data: subscription, error } = await supabaseAdmin
-      .from('teacher_subscriptions')
-      .upsert(
-        {
-          teacher_id: teacherId,
-          package_id: packageId,
-          status: 'active',
-          started_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'teacher_id' }
-      )
+    // بدل التفعيل الفوري: بنسجل طلب الدفع "قيد الانتظار" لحد ما الأدمن
+    // يراجعه يدوي (المعلم بيبعت رقم مرجع تحويل Instapay/Vodafone Cash)
+    const { data: paymentRequest, error } = await supabaseAdmin
+      .from('package_payment_requests')
+      .insert({
+        teacher_id: teacherId,
+        package_id: packageId,
+        amount: pkg.price,
+        reference_number: referenceNumber,
+        note: note || null,
+        status: 'pending',
+      })
       .select()
       .single()
 
-    if (error || !subscription) {
-      return NextResponse.json({ error: 'حصل خطأ في تفعيل الاشتراك' }, { status: 500 })
+    if (error || !paymentRequest) {
+      return NextResponse.json({ error: 'حصل خطأ في إرسال الطلب' }, { status: 500 })
     }
 
     await logActivity({
       userId: teacherId,
       userRole: 'teacher',
-      action: 'package.subscribe',
+      action: 'package.payment_request',
       entityType: 'package',
       entityId: packageId,
       request,
     })
 
-    return NextResponse.json({ subscription })
+    return NextResponse.json({
+      paymentRequest,
+      message: 'طلبك اتبعت، هيتم مراجعته خلال 24 ساعة',
+    })
   } catch (err) {
     console.error('Package subscribe error:', err)
     return NextResponse.json({ error: 'حصل خطأ، حاول تاني' }, { status: 500 })
