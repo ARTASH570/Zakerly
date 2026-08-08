@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     await logActivity({
       userId: teacherId,
       userRole: 'teacher',
-      action: 'package.payment_request',
+      action: 'package.subscribe',    
       entityType: 'package',
       entityId: packageId,
       request,
