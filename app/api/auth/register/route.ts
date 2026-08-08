@@ -36,7 +36,15 @@ export async function POST(request: Request) {
     }
 
     const supabase = createServerSupabaseClient()
-    const { data, error } = await supabase.auth.signUp({ email, password })
+const { data, error } = await supabase.auth.signUp({ email, password })
+
+if (error || !data.user) {
+  // ... الكود الموجود زي ما هو
+}
+
+// ⚠️ تأخير بسيط عشان نتجنب مشكلة الـ connection pooling: أحيانًا صف
+// اليوزر الجديد في auth.users مش بيبقى مرئي فورًا لاتصال تاني (supabaseAdmin)
+await new Promise((resolve) => setTimeout(resolve, 500))
 
     if (error || !data.user) {
       console.error('Supabase signUp error:', {
