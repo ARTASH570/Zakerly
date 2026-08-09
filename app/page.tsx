@@ -20,13 +20,13 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="px-6 md:px-16 max-w-3xl mx-auto pt-10 pb-20 text-center">
         <Reveal as="fade-in-up" delay={80}>
-          <p className="text-gold text-sm tracking-wide mb-4">ذاكرلي،هنذاكرلك </p>
+          <p className="text-gold text-sm tracking-wide mb-4">ذاكرلي،،،هنذاكرلك </p>
         </Reveal>
         <Reveal as="fade-in-up" delay={160}>
           <h1 className="font-display text-4xl md:text-5xl font-bold leading-tight mb-6">
-            <br />منصة ذاكرلي بتجمعلك كل اللي تحتاجه في رحلتك التعليمية — شرح، مراجعة، واختبارات — في مكان واحد وبطريقة بسيطة
-          <br />
-            <span className="text-gold">في مكان واحد.</span>
+            منصة ذاكرلي
+            <br />
+            <span className="text-gold">zakerly</span>
           </h1>
         </Reveal>
         <Reveal as="fade-in-up" delay={260}>
