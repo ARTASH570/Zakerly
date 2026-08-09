@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     // صف يتيم في جدول payments من غير أي checkout session حقيقي وراه
     let priceUsdCents: number
     try {
-      priceUsdCents = egpToUsdCents(finalPrice)
+      priceUsdCents = await egpToUsdCents(finalPrice)
     } catch (conversionErr) {
       console.error('Stripe create: currency conversion error', conversionErr)
       Sentry.captureException(conversionErr)
