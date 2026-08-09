@@ -6,7 +6,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const amountEgp = Number(searchParams.get('amount'))
 
-    if (!amountEgp  amountEgp <= 0  Number.isNaN(amountEgp)) {
+    if (!amountEgp || amountEgp <= 0 || Number.isNaN(amountEgp)) {
       return NextResponse.json({ error: 'قيمة غير صحيحة' }, { status: 400 })
     }
 
