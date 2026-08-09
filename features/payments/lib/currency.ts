@@ -49,7 +49,7 @@ async function fetchLiveRate(): Promise<number> {
     const data = await res.json()
     const egpPerUsd = data?.rates?.EGP
 
-    if (!egpPerUsd  typeof egpPerUsd !== 'number'  egpPerUsd <= 0) {
+    if (!egpPerUsd || typeof egpPerUsd !== 'number' || egpPerUsd <= 0) {
       throw new Error('Exchange rate API returned invalid EGP rate')
     }
 
