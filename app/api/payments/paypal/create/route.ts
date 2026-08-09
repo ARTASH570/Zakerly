@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     // صف يتيم في جدول payments من غير أي order حقيقي وراه
     let priceUsd: number
     try {
-      priceUsd = awaitegpToUsdCents(finalPrice) / 100
+      priceUsd = await egpToUsdCents(finalPrice) / 100
     } catch (conversionErr) {
       console.error('PayPal create: currency conversion error', conversionErr)
       Sentry.captureException(conversionErr)
