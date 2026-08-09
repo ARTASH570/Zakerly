@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface PaymentButtonProps {
   courseId: string
@@ -13,6 +13,34 @@ export default function PaymentButton({ courseId, price, isEgyptOrMena }: Paymen
   const [errorMsg, setErrorMsg] = useState('')
   const [couponCode, setCouponCode] = useState('')
   const [showCouponField, setShowCouponField] = useState(false)
+
+  // السعر بالدولار للعرض بس - بيتجاب من السيرفر عشان يستخدم نفس دالة
+  // التحويل الحقيقية اللي بتستخدم وقت الدفع الفعلي. لحد ما يوصل، بنعرض
+  // "..." بدل ما نعرض رقم الجنيه غلط كأنه دولار
+  const [usdPrice, setUsdPrice] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (isEgyptOrMena) return // مش محتاجينه أصلاً لو الدفع هيبقى بالجنيه
+
+    let cancelled = false
+
+    async function loadUsdPrice() {
+      try {
+        const res = await fetch(`/api/payments/exchange-rate?amount=${price}`)
+        const data = await res.json()
+        if (!cancelled && res.ok) {
+          setUsdPrice(data.usd)
+        }
+      } catch {
+        // لو فشل، هنسيب usdPrice null والزرار هيوري "..." - أفضل من رقم غلط
+      }
+    }
+
+    loadUsdPrice()
+    return () => {
+      cancelled = true
+    }
+  }, [price, isEgyptOrMena])
 
   async function handlePay(provider: 'paymob' | 'stripe' | 'paypal') {
     setLoading(provider)
@@ -88,6 +116,8 @@ export default function PaymentButton({ courseId, price, isEgyptOrMena }: Paymen
     )
   }
 
+  const usdDisplay = usdPrice !== null ? usdPrice.toFixed(2) : '...'
+
   // دولي: نديله خيارين، يختار الأنسب ليه
   return (
     <div>
@@ -95,20 +125,20 @@ export default function PaymentButton({ courseId, price, isEgyptOrMena }: Paymen
       <div className="space-y-3">
         <button
           onClick={() => handlePay('paypal')}
-          disabled={loading !== null}
+          disabled={loading !== null || usdPrice === null}
           className="bg-[#FFC439] text-[#003087] font-bold rounded-lg px-6 py-3 hover:opacity-90 transition-opacity disabled:opacity-50 w-full"
         >
-          {loading === 'paypal' ? 'جاري التحويل...' : `PayPal — ${price} دولار`}
+          {loading === 'paypal' ? 'جاري التحويل...' : `PayPal — ${usdDisplay} دولار`}
         </button>
         <button
-          onClick={() => handlePay('stripe')}
-          disabled={loading !== null}
+          onClick={() => handlePay('stripe')}disabled={loading !== null || usdPrice === null}
           className="bg-gold text-board font-bold rounded-lg px-6 py-3 hover:bg-gold/90 transition-colors disabled:opacity-50 w-full"
         >
-          {loading === 'stripe' ? 'جاري التحويل...' : `ادفع بالبطاقة — ${price} دولار`}
+          {loading === 'stripe' ? 'جاري التحويل...' : `ادفع بالبطاقة — ${usdDisplay} دولار`}
         </button>
         {errorMsg && <p className="text-red-400 text-sm mt-2">{errorMsg}</p>}
       </div>
     </div>
   )
 }
+          
