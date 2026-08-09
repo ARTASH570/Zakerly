@@ -150,7 +150,7 @@ export default function PaymentButton({ courseId, price, isEgyptOrMena }: Paymen
             <p className="text-gold text-xs mt-1">
               الكود شغال ✓ السعر بعد الخصم:{' '}
               {isEgyptOrMena
-                ? ${discountedPriceEgp} جنيه
+                ? `${discountedPriceEgp} جنيه`
                 : `${discountedPriceUsd?.toFixed(2) ?? '...'} دولار`}
             </p>
           )}
