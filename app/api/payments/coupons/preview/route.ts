@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { courseId, couponCode } = body as { courseId?: string; couponCode?: string }
 
-    if (!courseId  !couponCode  typeof couponCode !== 'string') {
+    if (!courseId || !couponCode || typeof couponCode !== 'string') {
       return NextResponse.json({ error: 'بيانات ناقصة' }, { status: 400 })
     }
 
@@ -46,10 +46,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'الكورس مش موجود' }, { status: 404 })
     }
 
-    const result = await validateAndPriceCoupon(couponCode, courseId, course.price, studentId)
+    // Cast to any to satisfy TS because validateAndPriceCoupon returns a union type
+    const result = (await validateAndPriceCoupon(couponCode, courseId, course!.price, studentId)) as any
 
-    if (!result.valid) {
-      return NextResponse.json({ valid: false, error: result.error })
+    if (!result || !result.valid) {
+      return NextResponse.json({ valid: false, error: result?.error || 'كوبون غير صالح' })
     }
 
     let finalPriceUsd: number | null = null
