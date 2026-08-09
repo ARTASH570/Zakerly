@@ -20,22 +20,18 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="px-6 md:px-16 max-w-3xl mx-auto pt-10 pb-20 text-center">
         <Reveal as="fade-in-up" delay={80}>
-          <p className="text-gold text-sm tracking-wide mb-4">منصة المعلمين أونلاين</p>
+          <p className="text-gold text-sm tracking-wide mb-4">ذاكرلي،هنذاكرلك </p>
         </Reveal>
         <Reveal as="fade-in-up" delay={160}>
           <h1 className="font-display text-4xl md:text-5xl font-bold leading-tight mb-6">
-            حصتك، فيديوهاتك،
-            <br />
-            ومتابعة طلابك
-            <br />
+            <br />منصة ذاكرلي بتجمعلك كل اللي تحتاجه في رحلتك التعليمية — شرح، مراجعة، واختبارات — في مكان واحد وبطريقة بسيطة
+          <br />
             <span className="text-gold">في مكان واحد.</span>
           </h1>
         </Reveal>
         <Reveal as="fade-in-up" delay={260}>
           <p className="text-chalk/70 text-lg leading-relaxed mb-8 max-w-md mx-auto">
-            ارفع فيديوهات كورساتك، خلّي الطلاب يدفعوا ويشوفوا حصصهم من غير تحميل أو مشاركة،
-            وابعت تقارير أداء لأولياء الأمور أوتوماتيك.
-          </p>
+منصة ذاكرلي بتجمعلك كل اللي تحتاجه في رحلتك التعليمية — شرح، مراجعة، واختبارات — في مكان واحد وبطريقة بسيطة          </p>
         </Reveal>
         <Reveal as="scale-in" delay={360}>
           <div className="flex gap-4 justify-center">
@@ -70,7 +66,7 @@ export default function LandingPage() {
           />
           <Feature
             title="حصص مباشرة"
-            desc="لايف على زوم في أي وقت يحتاجه الطالب، ويدخل من نفس المنصة."
+            desc="حصص لايف في اي وقت يحتاجه الطالب"
             delay={200}
           />
           <Feature
