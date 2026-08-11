@@ -1,5 +1,5 @@
 // المسار المفروض: app/api/admin/deletion-requests/[id]/route.ts
-import { createClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(
@@ -7,7 +7,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const requestId = params.id
-  const supabase = createClient()
+  const supabase = createServerSupabaseClient()
 
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError || !userData.user) {

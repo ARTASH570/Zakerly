@@ -1,5 +1,5 @@
 // المسار المفروض: app/api/videos/[id]/route.ts
-import { createClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function DELETE(
@@ -7,7 +7,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const videoId = params.id
-  const supabase = createClient()
+  const supabase = createServerSupabaseClient()
 
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError || !userData.user) {
