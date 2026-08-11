@@ -1,0 +1,281 @@
+[33mcommit 47046ad199bfe633b677811a133c69530a30aa02[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Omar <omaressamouf@icloud.com>
+Date:   Tue Aug 11 04:01:09 2026 +0300
+
+    إضافة route حذف الكورس في المكان الصحيح
+
+[1mdiff --git a/app/api/courses/[id]/duplicate/route.ts b/app/api/courses/[id]/duplicate/route.ts[m
+[1mindex 7a578ff..cf26dc4 100644[m
+[1m--- a/app/api/courses/[id]/duplicate/route.ts[m
+[1m+++ b/app/api/courses/[id]/duplicate/route.ts[m
+[36m@@ -1,84 +1,111 @@[m
+[31m-// المسار المفروض: app/api/courses/[id]/route.ts[m
+[31m-//[m
+[31m-// ⚠️ لو الـ import بتاع createClient تحت مختلف عندك، غيّره بس -[m
+[31m-// المفروض عندك ملف بيعمل server client بيقرأ الكوكيز (نفس الي بيستخدمه أي route محمي عندك حاليًا)[m
+[31m-import { createServerSupabaseClient } from '@/lib/supabase/server'[m
+ import { NextResponse } from 'next/server'[m
+[32m+[m[32mimport { supabaseAdmin } from '@/lib/supabase/admin'[m
+[32m+[m[32mimport { requireTeacher } from '@/features/auth/lib/auth'[m
+[32m+[m[32mimport { verifyRequestOrigin } from '@/lib/shared/csrf'[m
+[32m+[m[32mimport { checkRateLimit } from '@/lib/shared/rateLimit'[m
+[32m+[m[32mimport { logActivity } from '@/lib/shared/activityLog'[m
+ [m
+[31m-export async function DELETE([m
+[31m-  req: Request,[m
+[31m-  { params }: { params: { id: string } }[m
+[31m-) {[m
+[31m-  const courseId = params.id[m
+[31m-  const supabase = createServerSupabaseClient()[m
+[31m-[m
+[31m-  const { data: userData, error: userError } = await supabase.auth.getUser()[m
+[31m-  if (userError || !userData.user) {[m
+[31m-    return NextResponse.json({ error: 'غير مسجل دخول' }, { status: 401 })[m
+[31m-  }[m
+[31m-  const teacherId = userData.user.id[m
+[32m+[m[32m// POST /api/courses/[id]/duplicate[m
+[32m+[m[32mexport async function POST(request: Request, { params }: { params: { id: string } }) {[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    if (!verifyRequestOrigin(request)) {[m
+[32m+[m[32m      return NextResponse.json({ error: 'طلب مرفوض' }, { status: 403 })[m
+[32m+[m[32m    }[m
+ [m
+[31m-  // نتأكد إن الكورس ده بتاع المعلم ده فعلاً (RLS كمان بتضمن الحماية دي، بس بنتأكد يدويًا عشان الرسالة تبقى واضحة)[m
+[31m-  const { data: course, error: courseError } = await supabase[m
+[31m-    .from('courses')[m
+[31m-    .select('id, title, teacher_id')[m
+[31m-    .eq('id', courseId)[m
+[31m-    .eq('teacher_id', teacherId)[m
+[31m-    .maybeSingle()[m
+[32m+[m[32m    const auth = await requireTeacher()[m
+[32m+[m[32m    if ('error' in auth) {[m
+[32m+[m[32m      return NextResponse.json({ error: auth.error }, { status: auth.status })[m
+[32m+[m[32m    }[m
+[32m+[m[32m    const { teacherId } = auth[m
+ [m
+[31m-  if (courseError || !course) {[m
+[31m-    return NextResponse.json({ error: 'الكورس مش موجود أو مش بتاعك' }, { status: 404 })[m
+[31m-  }[m
+[32m+[m[32m    if (!(await checkRateLimit(`course-duplicate:${teacherId}`, 10, 3600))) {[m
+[32m+[m[32m      return NextResponse.json({ error: 'حاول تاني بعد شوية' }, { status: 429 })[m
+[32m+[m[32m    }[m
+ [m
+[31m-  // بنعد الاشتراكات الفعالة والمدفوعات الناجحة على الكورس ده[m
+[31m-  const { count: enrolledCount } = await supabase[m
+[31m-    .from('enrollments')[m
+[31m-    .select('id', { count: 'exact', head: true })[m
+[31m-    .eq('course_id', courseId)[m
+[31m-    .eq('is_active', true)[m
+[32m+[m[32m    // 1. تأكد إن الكورس الأصلي فعلاً بتاع المعلم ده[m
+[32m+[m[32m    const { data: originalCourse } = await supabaseAdmin[m
+[32m+[m[32m      .from('courses')[m
+[32m+[m[32m      .select('*')[m
+[32m+[m[32m      .eq('id', params.id)[m
+[32m+[m[32m      .eq('teacher_id', teacherId)[m
+[32m+[m[32m      .single()[m
+ [m
+[31m-  const { data: payments } = await supabase[m
+[31m-    .from('payments')[m
+[31m-    .select('amount')[m
+[31m-    .eq('course_id', courseId)[m
+[31m-    .eq('status', 'success')[m
+[32m+[m[32m    if (!originalCourse) {[m
+[32m+[m[32m      return NextResponse.json({ error: 'الكورس مش موجود' }, { status: 404 })[m
+[32m+[m[32m    }[m
+ [m
+[31m-  const totalPaid = (payments || []).reduce((sum, p) => sum + Number(p.amount), 0)[m
+[31m-  const hasStudents = (enrolledCount || 0) > 0 || (payments || []).length > 0[m
+[32m+[m[32m    // 2. اعمل نسخة من الكورس - مش منشورة تلقائيًا، عشان المعلم يراجعها الأول قبل ما تظهر للطلاب[m
+[32m+[m[32m    const { data: newCourse, error: courseError } = await supabaseAdmin[m
+[32m+[m[32m      .from('courses')[m
+[32m+[m[32m      .insert({[m
+[32m+[m[32m        teacher_id: teacherId,[m
+[32m+[m[32m        title: `${originalCourse.title} (نسخة)`,[m
+[32m+[m[32m        description: originalCourse.description,[m
+[32m+[m[32m        price: originalCourse.price,[m
+[32m+[m[32m        is_published: false,[m
+[32m+[m[32m      })[m
+[32m+[m[32m      .select()[m
+[32m+[m[32m      .single()[m
+ [m
+[31m-  // مفيش طلاب مشتركين خالص → مسح مباشر[m
+[31m-  if (!hasStudents) {[m
+[31m-    const { error: deleteError } = await supabase.from('courses').delete().eq('id', courseId)[m
+[31m-    if (deleteError) {[m
+[31m-      return NextResponse.json({ error: 'حصل خطأ أثناء الحذف' }, { status: 500 })[m
+[32m+[m[32m    if (courseError || !newCourse) {[m
+[32m+[m[32m      return NextResponse.json({ error: 'حصل خطأ في تكرار الكورس' }, { status: 500 })[m
+     }[m
+[31m-    return NextResponse.json({ action: 'deleted' })[m
+[31m-  }[m
+ [m
+[31m-  // فيه طلاب مشتركين → نسجل طلب حذف بدل الحذف المباشر[m
+[31m-  let body: { reason?: string } = {}[m
+[31m-  try {[m
+[31m-    body = await req.json()[m
+[31m-  } catch {[m
+[31m-    // مفيش body، مش مشكلة - reason هتبقى فاضية[m
+[31m-  }[m
+[32m+[m[32m    // 3. انسخ كل الأقسام الأول، وبعدين الفيديوهات جوه كل قسم - عشان الهيكل يفضل زي ما هو بالظبط[m
+[32m+[m[32m    const { data: originalSections } = await supabaseAdmin[m
+[32m+[m[32m      .from('sections')[m
+[32m+[m[32m      .select('id, title, order_index')[m
+[32m+[m[32m      .eq('course_id', params.id)[m
+[32m+[m[32m      .order('order_index', { ascending: true })[m
+[32m+[m
+[32m+[m[32m    const sectionIdMap = new Map<string, string>() // القديم -> الجديد[m
+ [m
+[31m-  const { error: insertError } = await supabase.from('deletion_requests').insert({[m
+[31m-    course_id: courseId,[m
+[31m-    teacher_id: teacherId,[m
+[31m-    course_title: course.title,[m
+[31m-    reason: body.reason || null,[m
+[31m-    enrolled_count: enrolledCount || 0,[m
+[31m-    total_paid: totalPaid,[m
+[31m-  })[m
+[32m+[m[32m    for (const section of originalSections || []) {[m
+[32m+[m[32m      const { data: newSection } = await supabaseAdmin[m
+[32m+[m[32m        .from('sections')[m
+[32m+[m[32m        .insert({ course_id: newCourse.id, title: section.title, order_index: section.order_index })[m
+[32m+[m[32m        .select()[m
+[32m+[m[32m        .single()[m
+ [m
+[31m-  if (insertError) {[m
+[31m-    // لو فيه طلب pending موجود بالفعل، الـ unique index هيرفض الإدراج[m
+[31m-    if (insertError.code === '23505') {[m
+[31m-      return NextResponse.json({ error: 'فيه طلب حذف قيد المراجعة بالفعل لنفس الكورس' }, { status: 409 })[m
+[32m+[m[32m      if (newSection) {[m
+[32m+[m[32m        sectionIdMap.set(section.id, newSection.id)[m
+[32m+[m[32m      }[m
+     }[m
+[31m-    return NextResponse.json({ error: 'حصل خطأ أثناء تسجيل الطلب' }, { status: 500 })[m
+[31m-  }[m
+ [m
+[31m-  return NextResponse.json({ action: 'requested' })[m
+[32m+[m[32m    // انسخ كل الفيديوهات - بنشاور على نفس الفيديو المرفوع أصلًا على Bunny،[m
+[32m+[m[32m    // مفيش رفع أو ترميز جديد، فده سريع ومجاني تمامًا[m
+[32m+[m[32m    const { data: originalVideos } = await supabaseAdmin[m
+[32m+[m[32m      .from('videos')[m
+[32m+[m[32m      .select('title, bunny_video_id, duration_seconds, order_index, section_id')[m
+[32m+[m[32m      .eq('course_id', params.id)[m
+[32m+[m[32m      .order('order_index', { ascending: true })[m
+[32m+[m
+[32m+[m[32m    if (originalVideos && originalVideos.length > 0) {[m
+[32m+[m[32m      await supabaseAdmin.from('videos').insert([m
+[32m+[m[32m        originalVideos.map((v) => ({[m
+[32m+[m[32m          course_id: newCourse.id,[m
+[32m+[m[32m          section_id: v.section_id ? sectionIdMap.get(v.section_id) : null,[m
+[32m+[m[32m          title: v.title,[m
+[32m+[m[32m          bunny_video_id: v.bunny_video_id,[m
+[32m+[m[32m          duration_seconds: v.duration_seconds,[m
+[32m+[m[32m          order_index: v.order_index,[m
+[32m+[m[32m        }))[m
+[32m+[m[32m      )[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    await logActivity({[m
+[32m+[m[32m      userId: teacherId,[m
+[32m+[m[32m      userRole: 'teacher',[m
+[32m+[m[32m      action: 'course.create',[m
+[32m+[m[32m      entityType: 'course',[m
+[32m+[m[32m      entityId: newCourse.id,[m
+[32m+[m[32m      metadata: { duplicatedFrom: params.id },[m
+[32m+[m[32m      request,[m
+[32m+[m[32m    })[m
+[32m+[m
+[32m+[m[32m    return NextResponse.json({ course: newCourse })[m
+[32m+[m[32m  } catch (err) {[m
+[32m+[m[32m    console.error('Course duplicate error:', err)[m
+[32m+[m[32m    return NextResponse.json({ error: 'حصل خطأ، حاول تاني' }, { status: 500 })[m
+[32m+[m[32m  }[m
+ }[m
+[1mdiff --git a/app/api/courses/[id]/route.ts b/app/api/courses/[id]/route.ts[m
+[1mnew file mode 100644[m
+[1mindex 0000000..7a578ff[m
+[1m--- /dev/null[m
+[1m+++ b/app/api/courses/[id]/route.ts[m
+[36m@@ -0,0 +1,84 @@[m
+[32m+[m[32m// المسار المفروض: app/api/courses/[id]/route.ts[m
+[32m+[m[32m//[m
+[32m+[m[32m// ⚠️ لو الـ import بتاع createClient تحت مختلف عندك، غيّره بس -[m
+[32m+[m[32m// المفروض عندك ملف بيعمل server client بيقرأ الكوكيز (نفس الي بيستخدمه أي route محمي عندك حاليًا)[m
+[32m+[m[32mimport { createServerSupabaseClient } from '@/lib/supabase/server'[m
+[32m+[m[32mimport { NextResponse } from 'next/server'[m
+[32m+[m
+[32m+[m[32mexport async function DELETE([m
+[32m+[m[32m  req: Request,[m
+[32m+[m[32m  { params }: { params: { id: string } }[m
+[32m+[m[32m) {[m
+[32m+[m[32m  const courseId = params.id[m
+[32m+[m[32m  const supabase = createServerSupabaseClient()[m
+[32m+[m
+[32m+[m[32m  const { data: userData, error: userError } = await supabase.auth.getUser()[m
+[32m+[m[32m  if (userError || !userData.user) {[m
+[32m+[m[32m    return NextResponse.json({ error: 'غير مسجل دخول' }, { status: 401 })[m
+[32m+[m[32m  }[m
+[32m+[m[32m  const teacherId = userData.user.id[m
+[32m+[m
+[32m+[m[32m  // نتأكد إن الكورس ده بتاع المعلم ده فعلاً (RLS كمان بتضمن الحماية دي، بس بنتأكد يدويًا عشان الرسالة تبقى واضحة)[m
+[32m+[m[32m  const { data: course, error: courseError } = await supabase[m
+[32m+[m[32m    .from('courses')[m
+[32m+[m[32m    .select('id, title, teacher_id')[m
+[32m+[m[32m    .eq('id', courseId)[m
+[32m+[m[32m    .eq('teacher_id', teacherId)[m
+[32m+[m[32m    .maybeSingle()[m
+[32m+[m
+[32m+[m[32m  if (courseError || !course) {[m
+[32m+[m[32m    return NextResponse.json({ error: 'الكورس مش موجود أو مش بتاعك' }, { status: 404 })[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // بنعد الاشتراكات الفعالة والمدفوعات الناجحة على الكورس ده[m
+[32m+[m[32m  const { count: enrolledCount } = await supabase[m
+[32m+[m[32m    .from('enrollments')[m
+[32m+[m[32m    .select('id', { count: 'exact', head: true })[m
+[32m+[m[32m    .eq('course_id', courseId)[m
+[32m+[m[32m    .eq('is_active', true)[m
+[32m+[m
+[32m+[m[32m  const { data: payments } = await supabase[m
+[32m+[m[32m    .from('payments')[m
+[32m+[m[32m    .select('amount')[m
+[32m+[m[32m    .eq('course_id', courseId)[m
+[32m+[m[32m    .eq('status', 'success')[m
+[32m+[m
+[32m+[m[32m  const totalPaid = (payments || []).reduce((sum, p) => sum + Number(p.amount), 0)[m
+[32m+[m[32m  const hasStudents = (enrolledCount || 0) > 0 || (payments || []).length > 0[m
+[32m+[m
+[32m+[m[32m  // مفيش طلاب مشتركين خالص → مسح مباشر[m
+[32m+[m[32m  if (!hasStudents) {[m
+[32m+[m[32m    const { error: deleteError } = await supabase.from('courses').delete().eq('id', courseId)[m
+[32m+[m[32m    if (deleteError) {[m
+[32m+[m[32m      return NextResponse.json({ error: 'حصل خطأ أثناء الحذف' }, { status: 500 })[m
+[32m+[m[32m    }[m
+[32m+[m[32m    return NextResponse.json({ action: 'deleted' })[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // فيه طلاب مشتركين → نسجل طلب حذف بدل الحذف المباشر[m
+[32m+[m[32m  let body: { reason?: string } = {}[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    body = await req.json()[m
+[32m+[m[32m  } catch {[m
+[32m+[m[32m    // مفيش body، مش مشكلة - reason هتبقى فاضية[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  const { error: insertError } = await supabase.from('deletion_requests').insert({[m
+[32m+[m[32m    course_id: courseId,[m
+[32m+[m[32m    teacher_id: teacherId,[m
+[32m+[m[32m    course_title: course.title,[m
+[32m+[m[32m    reason: body.reason || null,[m
+[32m+[m[32m    enrolled_count: enrolledCount || 0,[m
+[32m+[m[32m    total_paid: totalPaid,[m
+[32m+[m[32m  })[m
+[32m+[m
+[32m+[m[32m  if (insertError) {[m
+[32m+[m[32m    // لو فيه طلب pending موجود بالفعل، الـ unique index هيرفض الإدراج[m
+[32m+[m[32m    if (insertError.code === '23505') {[m
+[32m+[m[32m      return NextResponse.json({ error: 'فيه طلب حذف قيد المراجعة بالفعل لنفس الكورس' }, { status: 409 })[m
+[32m+[m[32m    }[m
+[32m+[m[32m    return NextResponse.json({ error: 'حصل خطأ أثناء تسجيل الطلب' }, { status: 500 })[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return NextResponse.json({ action: 'requested' })[m
+[32m+[m[32m}[m
