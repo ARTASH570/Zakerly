@@ -1,84 +1,111 @@
-// المسار المفروض: app/api/courses/[id]/route.ts
-//
-// ⚠️ لو الـ import بتاع createClient تحت مختلف عندك، غيّره بس -
-// المفروض عندك ملف بيعمل server client بيقرأ الكوكيز (نفس الي بيستخدمه أي route محمي عندك حاليًا)
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireTeacher } from '@/features/auth/lib/auth'
+import { verifyRequestOrigin } from '@/lib/shared/csrf'
+import { checkRateLimit } from '@/lib/shared/rateLimit'
+import { logActivity } from '@/lib/shared/activityLog'
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const courseId = params.id
-  const supabase = createServerSupabaseClient()
-
-  const { data: userData, error: userError } = await supabase.auth.getUser()
-  if (userError || !userData.user) {
-    return NextResponse.json({ error: 'غير مسجل دخول' }, { status: 401 })
-  }
-  const teacherId = userData.user.id
-
-  // نتأكد إن الكورس ده بتاع المعلم ده فعلاً (RLS كمان بتضمن الحماية دي، بس بنتأكد يدويًا عشان الرسالة تبقى واضحة)
-  const { data: course, error: courseError } = await supabase
-    .from('courses')
-    .select('id, title, teacher_id')
-    .eq('id', courseId)
-    .eq('teacher_id', teacherId)
-    .maybeSingle()
-
-  if (courseError || !course) {
-    return NextResponse.json({ error: 'الكورس مش موجود أو مش بتاعك' }, { status: 404 })
-  }
-
-  // بنعد الاشتراكات الفعالة والمدفوعات الناجحة على الكورس ده
-  const { count: enrolledCount } = await supabase
-    .from('enrollments')
-    .select('id', { count: 'exact', head: true })
-    .eq('course_id', courseId)
-    .eq('is_active', true)
-
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('amount')
-    .eq('course_id', courseId)
-    .eq('status', 'success')
-
-  const totalPaid = (payments || []).reduce((sum, p) => sum + Number(p.amount), 0)
-  const hasStudents = (enrolledCount || 0) > 0 || (payments || []).length > 0
-
-  // مفيش طلاب مشتركين خالص → مسح مباشر
-  if (!hasStudents) {
-    const { error: deleteError } = await supabase.from('courses').delete().eq('id', courseId)
-    if (deleteError) {
-      return NextResponse.json({ error: 'حصل خطأ أثناء الحذف' }, { status: 500 })
-    }
-    return NextResponse.json({ action: 'deleted' })
-  }
-
-  // فيه طلاب مشتركين → نسجل طلب حذف بدل الحذف المباشر
-  let body: { reason?: string } = {}
+// POST /api/courses/[id]/duplicate
+export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
-    body = await req.json()
-  } catch {
-    // مفيش body، مش مشكلة - reason هتبقى فاضية
-  }
-
-  const { error: insertError } = await supabase.from('deletion_requests').insert({
-    course_id: courseId,
-    teacher_id: teacherId,
-    course_title: course.title,
-    reason: body.reason || null,
-    enrolled_count: enrolledCount || 0,
-    total_paid: totalPaid,
-  })
-
-  if (insertError) {
-    // لو فيه طلب pending موجود بالفعل، الـ unique index هيرفض الإدراج
-    if (insertError.code === '23505') {
-      return NextResponse.json({ error: 'فيه طلب حذف قيد المراجعة بالفعل لنفس الكورس' }, { status: 409 })
+    if (!verifyRequestOrigin(request)) {
+      return NextResponse.json({ error: 'طلب مرفوض' }, { status: 403 })
     }
-    return NextResponse.json({ error: 'حصل خطأ أثناء تسجيل الطلب' }, { status: 500 })
-  }
 
-  return NextResponse.json({ action: 'requested' })
+    const auth = await requireTeacher()
+    if ('error' in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
+    }
+    const { teacherId } = auth
+
+    if (!(await checkRateLimit(`course-duplicate:${teacherId}`, 10, 3600))) {
+      return NextResponse.json({ error: 'حاول تاني بعد شوية' }, { status: 429 })
+    }
+
+    // 1. تأكد إن الكورس الأصلي فعلاً بتاع المعلم ده
+    const { data: originalCourse } = await supabaseAdmin
+      .from('courses')
+      .select('*')
+      .eq('id', params.id)
+      .eq('teacher_id', teacherId)
+      .single()
+
+    if (!originalCourse) {
+      return NextResponse.json({ error: 'الكورس مش موجود' }, { status: 404 })
+    }
+
+    // 2. اعمل نسخة من الكورس - مش منشورة تلقائيًا، عشان المعلم يراجعها الأول قبل ما تظهر للطلاب
+    const { data: newCourse, error: courseError } = await supabaseAdmin
+      .from('courses')
+      .insert({
+        teacher_id: teacherId,
+        title: `${originalCourse.title} (نسخة)`,
+        description: originalCourse.description,
+        price: originalCourse.price,
+        is_published: false,
+      })
+      .select()
+      .single()
+
+    if (courseError || !newCourse) {
+      return NextResponse.json({ error: 'حصل خطأ في تكرار الكورس' }, { status: 500 })
+    }
+
+    // 3. انسخ كل الأقسام الأول، وبعدين الفيديوهات جوه كل قسم - عشان الهيكل يفضل زي ما هو بالظبط
+    const { data: originalSections } = await supabaseAdmin
+      .from('sections')
+      .select('id, title, order_index')
+      .eq('course_id', params.id)
+      .order('order_index', { ascending: true })
+
+    const sectionIdMap = new Map<string, string>() // القديم -> الجديد
+
+    for (const section of originalSections || []) {
+      const { data: newSection } = await supabaseAdmin
+        .from('sections')
+        .insert({ course_id: newCourse.id, title: section.title, order_index: section.order_index })
+        .select()
+        .single()
+
+      if (newSection) {
+        sectionIdMap.set(section.id, newSection.id)
+      }
+    }
+
+    // انسخ كل الفيديوهات - بنشاور على نفس الفيديو المرفوع أصلًا على Bunny،
+    // مفيش رفع أو ترميز جديد، فده سريع ومجاني تمامًا
+    const { data: originalVideos } = await supabaseAdmin
+      .from('videos')
+      .select('title, bunny_video_id, duration_seconds, order_index, section_id')
+      .eq('course_id', params.id)
+      .order('order_index', { ascending: true })
+
+    if (originalVideos && originalVideos.length > 0) {
+      await supabaseAdmin.from('videos').insert(
+        originalVideos.map((v) => ({
+          course_id: newCourse.id,
+          section_id: v.section_id ? sectionIdMap.get(v.section_id) : null,
+          title: v.title,
+          bunny_video_id: v.bunny_video_id,
+          duration_seconds: v.duration_seconds,
+          order_index: v.order_index,
+        }))
+      )
+    }
+
+    await logActivity({
+      userId: teacherId,
+      userRole: 'teacher',
+      action: 'course.create',
+      entityType: 'course',
+      entityId: newCourse.id,
+      metadata: { duplicatedFrom: params.id },
+      request,
+    })
+
+    return NextResponse.json({ course: newCourse })
+  } catch (err) {
+    console.error('Course duplicate error:', err)
+    return NextResponse.json({ error: 'حصل خطأ، حاول تاني' }, { status: 500 })
+  }
 }
