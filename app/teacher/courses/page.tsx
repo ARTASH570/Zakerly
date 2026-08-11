@@ -18,6 +18,7 @@ export default function TeacherCoursesPage() {
   const router = useRouter()
   const [teacherId, setTeacherId] = useState<string | null>(null)
   const [courses, setCourses] = useState<Course[]>([])
+  const [pendingDeletionCourseIds, setPendingDeletionCourseIds] = useState<Set<string>>(new Set())
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
@@ -27,6 +28,7 @@ export default function TeacherCoursesPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   async function loadCourses(currentTeacherId: string) {
     const { data } = await supabase
@@ -36,6 +38,14 @@ export default function TeacherCoursesPage() {
       .order('created_at', { ascending: false })
 
     setCourses(data || [])
+
+    const { data: pending } = await supabase
+      .from('deletion_requests')
+      .select('course_id')
+      .eq('teacher_id', currentTeacherId)
+      .eq('status', 'pending')
+
+    setPendingDeletionCourseIds(new Set((pending || []).map((r) => r.course_id)))
   }
 
   useEffect(() => {
@@ -98,6 +108,31 @@ export default function TeacherCoursesPage() {
       }
     } finally {
       setDuplicatingId(null)
+    }
+  }
+
+  async function handleDelete(courseId: string, courseTitle: string) {
+    if (!teacherId) return
+    if (!confirm(`متأكد إنك عايز تمسح كورس "${courseTitle}"؟ الإجراء ده مش هيترجع.`)) return
+
+    setDeletingId(courseId)
+    try {
+      const res = await fetch(`/api/courses/${courseId}`, { method: 'DELETE' })
+      const data = await res.json()
+
+      if (!res.ok) {
+        alert(data.error || 'حصل خطأ')
+        return
+      }
+
+      if (data.action === 'deleted') {
+        setCourses(courses.filter((c) => c.id !== courseId))
+      } else if (data.action === 'requested') {
+        alert('الكورس ده فيه طلاب مشتركين، فتم إرسال طلب حذف للأدمن للمراجعة.')
+        await loadCourses(teacherId)
+      }
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -200,6 +235,7 @@ export default function TeacherCoursesPage() {
         <div className="space-y-3">
           {courses.map((course) => {
             const schedule = scheduleLabel(course)
+            const isPendingDeletion = pendingDeletionCourseIds.has(course.id)
             return (
               <div
                 key={course.id}
@@ -209,6 +245,9 @@ export default function TeacherCoursesPage() {
                   <p className="font-bold">{course.title}</p>
                   <p className="text-chalk/50 text-sm">{course.price} ج.م</p>
                   {schedule && <p className="text-gold/70 text-xs mt-1">{schedule}</p>}
+                  {isPendingDeletion && (
+                    <p className="text-red-400 text-xs mt-1">طلب الحذف قيد المراجعة من الأدمن</p>
+                  )}
                 </Link>
                 <div className="flex items-center gap-3">
                   <button
@@ -218,6 +257,15 @@ export default function TeacherCoursesPage() {
                   >
                     {duplicatingId === course.id ? 'جاري النسخ...' : 'كرر'}
                   </button>
+                  {!isPendingDeletion && (
+                    <button
+                      onClick={() => handleDelete(course.id, course.title)}
+                      disabled={deletingId === course.id}
+                      className="text-red-400 text-sm hover:text-red-300 disabled:opacity-50"
+                    >
+                      {deletingId === course.id ? '...' : 'حذف'}
+                    </button>
+                  )}
                   <Link href={`/teacher/courses/${course.id}`} className="text-gold text-sm">
                     إدارة ←
                   </Link>

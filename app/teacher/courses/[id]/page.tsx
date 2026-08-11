@@ -30,6 +30,7 @@ export default function ManageCourseVideosPage() {
   const [addingSection, setAddingSection] = useState(false)
   const [uploadingInSection, setUploadingInSection] = useState<string | null>(null)
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [savingOrder, setSavingOrder] = useState(false)
 
   // بنستخدم drag & drop الأصلي في HTML - من غير أي مكتبة خارجية
@@ -141,6 +142,23 @@ export default function ManageCourseVideosPage() {
     }
   }
 
+  async function handleDeleteVideo(videoId: string, videoTitle: string) {
+    if (!confirm(`متأكد إنك عايز تمسح فيديو "${videoTitle}"؟ الإجراء ده مش هيترجع.`)) return
+
+    setDeletingId(videoId)
+    try {
+      const res = await fetch(`/api/videos/${videoId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setVideos(videos.filter((v) => v.id !== videoId))
+      } else {
+        const data = await res.json()
+        alert(data.error || 'حصل خطأ أثناء الحذف')
+      }
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-board text-chalk px-6 md:px-16 py-10">
       <div className="max-w-2xl mx-auto">
@@ -214,6 +232,13 @@ export default function ManageCourseVideosPage() {
                         className="text-chalk/50 text-xs hover:text-gold disabled:opacity-50"
                       >
                         {duplicatingId === video.id ? 'جاري النسخ...' : 'كرر'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteVideo(video.id, video.title)}
+                        disabled={deletingId === video.id}
+                        className="text-red-400 text-xs hover:text-red-300 disabled:opacity-50"
+                      >
+                        {deletingId === video.id ? '...' : 'حذف'}
                       </button>
                     </div>
                   ))}
