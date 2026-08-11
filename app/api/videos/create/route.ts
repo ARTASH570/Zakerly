@@ -10,7 +10,7 @@ import { logActivity } from '@/lib/shared/activityLog'
 
 // POST /api/videos/create
 // Body: { courseId: string, sectionId: string, title: string }
-export async function POST(request: Request) {
+export async function DELETE(request: Request) {
   try {
     if (!verifyRequestOrigin(request)) {
       return NextResponse.json({ error: 'طلب مرفوض' }, { status: 403 })
