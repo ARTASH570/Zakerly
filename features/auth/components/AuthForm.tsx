@@ -182,7 +182,7 @@ export default function AuthForm({ fixedRole }: AuthFormProps) {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-chalk/40 hover:text-gold transition-colors"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gold transition-colors"
               aria-label={showPassword ? 'إخفاء كلمة السر' : 'إظهار كلمة السر'}
               tabIndex={-1}
             >
