@@ -16,9 +16,12 @@ export async function GET() {
     .eq('id', userData.user.id)
     .maybeSingle()
 
-  if (!adminRow) {
-    return NextResponse.json({ error: 'مش متاح ليك الوصول' }, { status: 403 })
-  }
+ if (!adminRow) {
+  return NextResponse.json({ 
+    error: 'مش متاح ليك الوصول',
+    debug_userId: userData.user.id,
+  }, { status: 403 })
+}
 
   // teachers(full_name, phone) و teacher_packages(name, price) بيشتغلوا كـ embed تلقائي
   // لأن package_payment_requests.teacher_id و package_id بيربطوا بالجدولين دول
